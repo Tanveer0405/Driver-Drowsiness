@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.pyc
+venv/
+.venv/
+venv312/
+
+# Training data and big artifacts
+data/
+output/
+*.keras
+*.h5
+
+# Downloaded automatically at first run
+models/face_landmarker.task
+
+# Notebooks / OS / editor
+.ipynb_checkpoints/
+.DS_Store
+.vscode/
+.idea/
+*.log

@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Driver Monitor</title>
+<style>
+:root{--bg:#0a1120;--card:#111b2f;--line:#1f2d49;--tx:#e8eef7;--mut:#8fa3bf;--ok:#2fbf71;--warn:#f5a524;--bad:#e5484d;--acc:#1fb5a8;--lv:var(--ok)}
+body.l1{--lv:var(--warn)}body.l2{--lv:var(--bad)}
+*{box-sizing:border-box;margin:0}
+[hidden]{display:none!important}
+body{font:15px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,sans-serif;color:var(--tx);min-height:100vh;padding:24px;
+background:radial-gradient(900px 500px at 10% -10%,#16507a55,transparent),radial-gradient(700px 400px at 100% 0,#1fb5a822,transparent),var(--bg)}
+body.l2::after{content:"";position:fixed;inset:0;pointer-events:none;box-shadow:inset 0 0 120px 20px #e5484dcc;animation:pulse .6s infinite alternate}
+@keyframes pulse{from{opacity:.25}to{opacity:1}}
+header,main{max-width:1280px;margin:0 auto}
+header{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:20px}
+.brand{display:flex;gap:14px;align-items:center}
+.logo{width:46px;height:46px;border-radius:14px;background:linear-gradient(135deg,var(--acc),#16507a);display:grid;place-items:center;font-size:24px;box-shadow:0 6px 24px #1fb5a855}
+h1{font-size:22px;letter-spacing:.2px}.sub{color:var(--mut);font-size:13px}
+.pills{display:flex;gap:8px;flex-wrap:wrap}
+.pill{padding:6px 12px;border-radius:99px;background:#16233b;border:1px solid var(--line);font-size:13px;color:var(--mut)}
+.pill.good{color:var(--ok);border-color:#2fbf7155}.pill.bad{color:var(--bad);border-color:#e5484d66}
+main{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(0,1fr);gap:20px}
+@media(max-width:960px){main{grid-template-columns:1fr}}
+.card{background:linear-gradient(180deg,#14213a,var(--card));border:1px solid var(--line);border-radius:20px;padding:18px}
+.card h2{font-size:12px;text-transform:uppercase;letter-spacing:1.2px;color:var(--mut);margin-bottom:10px;font-weight:600}
+.video{padding:0;overflow:hidden;position:relative;border:2px solid var(--lv);box-shadow:0 0 40px -8px var(--lv);transition:.3s}
+video{width:100%;display:block;aspect-ratio:4/3;object-fit:cover;transform:scaleX(-1);background:#050a14}
+.banner{position:absolute;top:16px;left:16px;right:16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+#state{padding:9px 18px;border-radius:99px;font-weight:700;font-size:17px;background:var(--lv);color:#06101d;box-shadow:0 4px 20px #0006}
+.chip{padding:6px 12px;border-radius:99px;background:#0b1220cc;border:1px solid var(--lv);backdrop-filter:blur(6px);font-size:13px}
+.calib{position:absolute;left:16px;right:16px;bottom:84px;padding:12px 16px;border-radius:14px;background:#0b1220dd;backdrop-filter:blur(8px);font-size:14px}
+.bar{height:8px;border-radius:9px;background:#0b1424;overflow:hidden;margin-top:8px}.bar i{display:block;height:100%;width:0;background:var(--acc);border-radius:9px;transition:width .3s}
+.idle{position:absolute;inset:0;display:grid;place-items:center;text-align:center;background:#0a1120ee;color:var(--mut)}
+.idle b{display:block;color:var(--tx);font-size:20px;margin-bottom:6px}
+.controls{position:absolute;left:0;right:0;bottom:0;padding:14px 16px;display:flex;gap:10px;flex-wrap:wrap;background:linear-gradient(transparent,#050a14dd)}
+button{font:inherit;font-weight:600;color:var(--tx);background:#1a2a47;border:1px solid var(--line);padding:9px 16px;border-radius:12px;cursor:pointer;transition:.15s}
+button:hover{background:#223659;transform:translateY(-1px)}button.pri{background:var(--acc);color:#06101d;border-color:var(--acc)}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.m .v{font-size:30px;font-weight:700;margin:2px 0 8px}.m .v small{font-size:13px;color:var(--mut);font-weight:500;margin-left:4px}
+.m .bar i{background:var(--acc)}.m.hot .bar i{background:var(--bad)}
+aside{display:flex;flex-direction:column;gap:14px}
+canvas{width:100%;height:120px;display:block;border-radius:10px;background:#0b1424}
+.lg{display:flex;gap:14px;font-size:12px;color:var(--mut);margin-top:8px}.lg b{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+#log{list-style:none;padding:0;font-size:13px;max-height:150px;overflow:auto}
+#log li{padding:7px 0;border-bottom:1px solid var(--line);display:flex;gap:10px}#log li:last-child{border:0}
+#log time{color:var(--mut)}.empty{color:var(--mut)}
+</style>
+</head>
+<body class="l0">
+<header>
+  <div class="brand"><div class="logo">&#128065;</div><div><h1>Driver Monitor</h1><div class="sub">Edge AI drowsiness detection &middot; Raspberry Pi 4</div></div></div>
+  <div class="pills"><span class="pill" id="pi">Pi: waiting</span><span class="pill" id="fps">-- fps</span><span class="pill" id="lat">-- ms</span></div>
+</header>
+<main>
+  <section class="card video" id="vcard">
+    <video id="cam" autoplay playsinline muted></video>
+    <div class="banner"><span id="state">Ready</span><span id="chips" style="display:contents"></span></div>
+    <div class="calib" id="calib" hidden><b>Calibrating</b> &middot; look ahead and blink normally<div class="bar"><i id="cbar"></i></div></div>
+    <div class="idle" id="idle"><div><b>Camera is off</b>Press Start camera to begin monitoring</div></div>
+    <div class="controls">
+      <button class="pri" id="bStart">Start camera</button><button id="bCal">Recalibrate</button><button id="bMute">Sound on</button><button id="bTest">Test alarm</button>
+    </div>
+  </section>
+  <aside>
+    <div class="grid">
+      <div class="card m"><h2>Eye openness</h2><div class="v" id="vEar">--</div><div class="bar"><i id="bEar"></i></div></div>
+      <div class="card m" id="mClosed"><h2>Eyes closed</h2><div class="v" id="vClosed">0.0<small>s</small></div><div class="bar"><i id="bClosed"></i></div></div>
+      <div class="card m" id="mPerclos"><h2>PERCLOS (30 s)</h2><div class="v" id="vPerclos">--</div><div class="bar"><i id="bPerclos"></i></div></div>
+      <div class="card m"><h2>Blink rate</h2><div class="v" id="vBlink">--<small>/min</small></div><div class="bar"><i id="bBlink"></i></div></div>
+    </div>
+    <div class="card"><h2>Last 2 minutes</h2><canvas id="tl"></canvas>
+      <div class="lg"><span><b style="background:#1fb5a8"></b>Eye openness</span><span><b style="background:#f5a52488"></b>Warning</span><span><b style="background:#e5484d99"></b>Alarm</span></div></div>
+    <div class="card"><h2>Alert history</h2><ul id="log"><li class="empty">No alerts yet</li></ul></div>
+  </aside>
+</main>
+<canvas id="cap" width="640" height="480" hidden></canvas>
+<script>
+const $=id=>document.getElementById(id);
+const LABEL={EYES_CLOSED:'Eyes closed too long',PERCLOS:'Frequent eye closure',NO_FACE:'No face detected',STARE:'Fixed stare',LOW_BLINK_DROOP:'Low blinking, drooping lids',HEAD_NOD:'Head nodding',PI_OFFLINE:'Pi not responding'};
+const CLOSED_ALARM=1.5, PERCLOS_LIMIT=0.30, WINDOW=120000;
+let stream,running=false,muted=false,ac,hist=[],lastKey='',alarmUntil=0,lastAlarm=0,lastWarn=0,lastT=0,fps=0;
+
+function tone(f,d,v,type='square'){if(muted||!ac)return;const o=ac.createOscillator(),g=ac.createGain();o.type=type;o.frequency.value=f;g.gain.value=v;o.connect(g).connect(ac.destination);o.start();o.stop(ac.currentTime+d)}
+function alarmSound(){tone(1000,.2,.25);setTimeout(()=>tone(700,.2,.25),220)}
+function sound(level){const n=Date.now();if(level===2)alarmUntil=n+2000;
+  if(n<alarmUntil){if(n-lastAlarm>=450){lastAlarm=n;alarmSound()}}
+  else if(level===1&&n-lastWarn>=3000){lastWarn=n;tone(660,.25,.12,'sine')}}
+
+function setLevel(level,reasons,label){
+  document.body.className='l'+level;$('state').textContent=label;
+  $('chips').innerHTML=reasons.map(r=>`<span class="chip">${LABEL[r]||r}</span>`).join('')}
+function meter(id,bar,pct,hot){$(bar).style.width=Math.max(0,Math.min(100,pct))+'%';if(id)$(id).classList.toggle('hot',!!hot)}
+
+function render(r,dt){
+  const off=!!r.error;
+  $('pi').className='pill '+(off?'bad':'good');$('pi').textContent=off?'Pi offline':'Pi connected';
+  const now=performance.now();if(lastT)fps=fps?fps*.8+.2*(1000/(now-lastT)):1000/(now-lastT);lastT=now;
+  $('fps').textContent=fps.toFixed(0)+' fps';$('lat').textContent=Math.round(dt)+' ms';
+  if(off){setLevel(1,['PI_OFFLINE'],'Warning');sound(1);return}
+  const lv=r.level,face=r.face_found;
+  setLevel(lv,r.reasons,lv===2?'DROWSY!':lv===1?'Warning':!face?'No face':r.calibrating?'Calibrating':'Alert & focused');
+  $('calib').hidden=!r.calibrating;$('cbar').style.width=(r.calibration_progress*100)+'%';
+  $('vEar').textContent=face?r.ear.toFixed(2):'--';meter(null,'bEar',r.ear/0.4*100);
+  $('vClosed').innerHTML=r.closed_duration.toFixed(1)+'<small>s</small>';meter('mClosed','bClosed',r.closed_duration/CLOSED_ALARM*100,r.closed_duration>=CLOSED_ALARM*.66);
+  const p=r.perclos;$('vPerclos').textContent=p==null?'--':Math.round(p*100)+'%';meter('mPerclos','bPerclos',p==null?0:p/PERCLOS_LIMIT*100,p!=null&&p>=PERCLOS_LIMIT*.66);
+  const b=r.blink_rate;$('vBlink').innerHTML=b==null?'--<small>needs 60 s</small>':b.toFixed(0)+'<small>/min</small>';meter(null,'bBlink',b==null?0:b/25*100);
+  sound(lv);
+  const key=lv+r.reasons.join();
+  if(key!==lastKey&&lv>0){const li=document.createElement('li'),t=new Date().toLocaleTimeString();
+    li.innerHTML=`<time>${t}</time><span>${lv===2?'&#128680;':'&#9888;&#65039;'} ${r.reasons.map(x=>LABEL[x]||x).join(', ')}</span>`;
+    const log=$('log');log.querySelector('.empty')?.remove();log.prepend(li);while(log.children.length>20)log.lastChild.remove()}
+  lastKey=key;
+  hist.push({t:Date.now(),ear:face?r.ear:null,lv});while(hist.length&&Date.now()-hist[0].t>WINDOW)hist.shift();draw()}
+
+function draw(){const c=$('tl'),d=devicePixelRatio||1,W=c.width=c.clientWidth*d,H=c.height=c.clientHeight*d,x=c.getContext('2d'),now=Date.now();
+  const X=t=>(t-(now-WINDOW))/WINDOW*W;
+  hist.forEach((h,i)=>{if(h.lv){x.fillStyle=h.lv===2?'#e5484d66':'#f5a52444';const n=hist[i+1]?X(hist[i+1].t):W;x.fillRect(X(h.t),0,Math.max(n-X(h.t),2),H)}});
+  x.strokeStyle='#1fb5a8';x.lineWidth=2*d;x.beginPath();let on=false;
+  hist.forEach(h=>{if(h.ear==null){on=false;return}const px=X(h.t),py=H-(Math.min(h.ear,.4)/.4)*(H-10*d)-5*d;on?x.lineTo(px,py):x.moveTo(px,py);on=true});x.stroke()}
+
+async function loop(){
+  if(!running)return;const t0=performance.now(),cv=$('cap');
+  cv.getContext('2d').drawImage($('cam'),0,0,640,480);
+  const blob=await new Promise(r=>cv.toBlob(r,'image/jpeg',.7));let res;
+  try{res=await (await fetch('/api/analyze',{method:'POST',body:blob})).json()}catch(e){res={error:1}}
+  const dt=performance.now()-t0;render(res,dt);setTimeout(loop,Math.max(0,66-dt))}
+
+async function start(){
+  try{stream=await navigator.mediaDevices.getUserMedia({video:{width:640,height:480},audio:false})}catch(e){alert('Camera unavailable: '+e.message);return}
+  $('cam').srcObject=stream;ac=ac||new AudioContext();ac.resume();running=true;$('idle').hidden=true;$('bStart').textContent='Stop camera';loop()}
+function stop(){running=false;stream&&stream.getTracks().forEach(t=>t.stop());$('idle').hidden=false;$('bStart').textContent='Start camera';setLevel(0,[],'Ready');$('calib').hidden=true;lastT=0}
+
+$('bStart').onclick=()=>running?stop():start();
+$('bCal').onclick=()=>fetch('/api/reset',{method:'POST'}).then(()=>{hist=[];lastKey=''});
+$('bMute').onclick=()=>{muted=!muted;$('bMute').textContent=muted?'Sound off':'Sound on'};
+$('bTest').onclick=()=>{ac=ac||new AudioContext();ac.resume();const m=muted;muted=false;alarmSound();setTimeout(()=>{alarmSound();muted=m},450)};
+draw();
+</script>
+</body>
+</html>
